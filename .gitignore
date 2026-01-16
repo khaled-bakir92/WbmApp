@@ -1,4 +1,5 @@
 # Sensible Daten - NIE committen!
+.env
 data/user.json
 
 # Bekannte Angebote (benutzerspezifisch)

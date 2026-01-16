@@ -1,6 +1,8 @@
 {
-    "max_warmmiete": 1950,
+    "max_warmmiete": 1950.0,
     "min_zimmer": 2,
     "wbs_required": false,
-    "excluded_areas": ["Marzahn"]
+    "excluded_areas": [
+        "Marzahn"
+    ]
 }
