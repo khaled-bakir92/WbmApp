@@ -1,0 +1,28 @@
+# Sensible Daten - NIE committen!
+data/user.json
+
+# Bekannte Angebote (benutzerspezifisch)
+data/known_listings.json
+
+# Debug Screenshots
+data/*.png
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Logs
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
