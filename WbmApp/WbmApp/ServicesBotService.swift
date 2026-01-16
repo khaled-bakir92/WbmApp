@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 /// Service-Layer für Bot-Lifecycle-Management
 /// Abstrahiert API-Calls und bietet High-Level-Funktionen
@@ -77,3 +78,4 @@ final class BotService: ObservableObject {
         return try await start(config: .debug)
     }
 }
+

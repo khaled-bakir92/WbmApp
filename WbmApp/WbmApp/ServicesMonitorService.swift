@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 /// Service-Layer für Monitoring und Logging
 /// Verwaltet Statistiken, Logs und Screenshots
@@ -45,6 +46,11 @@ final class MonitorService: ObservableObject {
         return try await getLogs(lines: 50)
     }
     
+    /// Alias: Logs abrufen (Deutsch)
+    func fetchLogs(lines: Int = 100) async throws -> LogResponse {
+        return try await getLogs(lines: lines)
+    }
+    
     // MARK: - Screenshots
     
     /// Listet alle verfügbaren Screenshots auf
@@ -59,9 +65,10 @@ final class MonitorService: ObservableObject {
     /// - Parameter filename: Name der Screenshot-Datei
     /// - Returns: Bild-Daten als Data
     func downloadScreenshot(_ filename: String) async throws -> Data {
-        // TODO: Implementierung für Bild-Download ohne JSON-Dekodierung
-        // Benötigt separate Methode in APIClient für Raw-Data-Download
-        fatalError("Screenshot-Download noch nicht implementiert")
+        return try await client.dataRequest(
+            method: .get,
+            path: APIEndpoint.screenshot(filename: filename).path
+        )
     }
     
     // MARK: - Health Check
@@ -136,3 +143,4 @@ struct HealthCheckResult {
         """
     }
 }
+

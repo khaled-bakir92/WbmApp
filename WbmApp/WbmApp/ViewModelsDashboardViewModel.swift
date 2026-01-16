@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import Combine
 
 /// Haupt-ViewModel für das Dashboard
 /// Koordiniert alle Services und verwaltet den UI-State
@@ -18,6 +19,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var botStatus: BotStatus?
     @Published var monitorStats: MonitorStats?
     @Published var filterConfig: FilterConfig?
+    @Published var listingStats: ListingStats?
     
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -52,11 +54,42 @@ final class DashboardViewModel: ObservableObject {
             self.monitorStats = stats
             self.filterConfig = config
             
+            // Erstelle wöchentliche Daten aus MonitorStats
+            self.listingStats = createListingStatsFromMonitor(stats)
+            
         } catch {
             errorMessage = "Fehler beim Laden: \(error.localizedDescription)"
         }
         
         isLoading = false
+    }
+    
+    /// Konvertiert MonitorStats in ListingStats für Chart
+    /// Zeigt nur den aktuellen Tag (letzter Check)
+    private func createListingStatsFromMonitor(_ stats: MonitorStats) -> ListingStats {
+        let calendar = Calendar.current
+        let now = Date()
+        let weekNumber = calendar.component(.weekOfYear, from: now)
+        let year = calendar.component(.year, from: now)
+        
+        let formatter = ISO8601DateFormatter()
+        let startDate = formatter.string(from: now)
+        
+        let weeklyListing = WeeklyListing(
+            id: "\(year)-W\(weekNumber)",
+            weekNumber: weekNumber,
+            year: year,
+            totalCount: stats.totalListingsLastCheck ?? 0,
+            matchedCount: stats.filteredListingsLastCheck ?? 0,
+            startDate: startDate
+        )
+        
+        return ListingStats(
+            totalListings: stats.knownListingsCount,
+            matchedListings: stats.filteredListingsLastCheck ?? 0,
+            appliedListings: stats.totalFormsSubmitted,
+            weeklyData: [weeklyListing] // Nur ein Eintrag: der letzte Check
+        )
     }
     
     /// Lädt nur den Bot-Status (für häufige Updates)
@@ -169,3 +202,4 @@ final class DashboardViewModel: ObservableObject {
         monitorStats?.healthStatus ?? .stopped
     }
 }
+

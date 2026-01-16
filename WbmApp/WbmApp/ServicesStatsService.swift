@@ -16,7 +16,7 @@ final class StatsService: Sendable {
     /// - Throws: APIError bei Netzwerk- oder Parsing-Fehlern
     func getListingStats() async throws -> ListingStats {
         let endpoint = "/api/stats/listings"
-        return try await client.get(endpoint)
+        return try await client.request(method: .get, path: endpoint)
     }
     
     /// Lädt nur wöchentliche Daten
@@ -24,7 +24,7 @@ final class StatsService: Sendable {
     /// - Returns: Array von WeeklyListing
     func getWeeklyData(weeks: Int = 8) async throws -> [WeeklyListing] {
         let endpoint = "/api/stats/weekly?weeks=\(weeks)"
-        return try await client.get(endpoint)
+        return try await client.request(method: .get, path: endpoint)
     }
 }
 
@@ -57,13 +57,15 @@ extension StatsService {
             let startDate = formatter.string(from: date)
             
             // Simuliere realistische Werte
-            let count = Int.random(in: 2...15)
+            let totalCount = Int.random(in: 15...60)
+            let matchedCount = Int.random(in: 2...15)
             
             return WeeklyListing(
                 id: "\(year)-W\(weekNumber)",
                 weekNumber: weekNumber,
                 year: year,
-                count: count,
+                totalCount: totalCount,
+                matchedCount: matchedCount,
                 startDate: startDate
             )
         }.reversed()

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 /// Service-Layer für Konfigurationsverwaltung
 /// Verwaltet Filter- und Benutzer-Konfiguration
@@ -64,6 +65,22 @@ final class ConfigService: ObservableObject {
         )
     }
     
+    /// Aktualisiert nur die Benutzerdaten (partial update: user_data)
+    /// - Parameter userData: Neue Benutzerdaten
+    /// - Returns: Aktualisierte User-Konfiguration vom Server
+    func updateUserData(_ userData: UserData) async throws -> UserConfig {
+        struct UserDataUpdate: Encodable {
+            let userData: UserData
+            enum CodingKeys: String, CodingKey { case userData = "user_data" }
+        }
+        let body = UserDataUpdate(userData: userData)
+        return try await client.request(
+            method: .put,
+            path: APIEndpoint.userConfig.path,
+            body: body
+        )
+    }
+    
     // MARK: - Partial Updates
     
     /// Aktualisiert nur die Filter-Parameter (partial update)
@@ -106,6 +123,28 @@ final class ConfigService: ObservableObject {
         config.excludedAreas.removeAll { $0 == area }
         return try await updateFilterConfig(config)
     }
+    
+    // MARK: - German Convenience Aliases
+    
+    /// Alias: Filter laden
+    func loadFilter() async throws -> FilterConfig {
+        return try await getFilterConfig()
+    }
+    
+    /// Alias: Filter speichern
+    func saveFilter(_ config: FilterConfig) async throws -> FilterConfig {
+        return try await updateFilterConfig(config)
+    }
+    
+    /// Alias: User laden
+    func loadUser() async throws -> UserConfig {
+        return try await getUserConfig()
+    }
+    
+    /// Alias: User speichern
+    func saveUser(_ config: UserConfig) async throws -> UserConfig {
+        return try await updateUserConfig(config)
+    }
 }
 
 // MARK: - Config Error
@@ -123,3 +162,4 @@ enum ConfigError: Error, LocalizedError {
         }
     }
 }
+

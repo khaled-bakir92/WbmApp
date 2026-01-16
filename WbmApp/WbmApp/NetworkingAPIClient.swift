@@ -75,6 +75,32 @@ actor APIClient {
         return try await request(method: method, path: path, body: body)
     }
     
+    // MARK: - Raw Data Request
+    
+    /// Führt einen HTTP-Request aus und gibt die Rohdaten zurück (z.B. für Bilder)
+    /// - Parameters:
+    ///   - method: HTTP-Methode
+    ///   - path: API-Pfad
+    ///   - body: Optional: Request-Body
+    /// - Returns: Response-Daten als Data
+    func dataRequest(
+        method: HTTPMethod,
+        path: String,
+        body: (any Encodable)? = nil
+    ) async throws -> Data {
+        guard let request = try createRequest(method: method, path: path, body: body) else {
+            throw APIError.invalidURL
+        }
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.httpError(statusCode: httpResponse.statusCode)
+        }
+        return data
+    }
+    
     // MARK: - Request Builder
     
     private func createRequest(

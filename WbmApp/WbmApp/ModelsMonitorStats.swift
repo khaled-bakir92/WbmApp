@@ -15,6 +15,8 @@ struct MonitorStats: Decodable, Sendable, Equatable {
     let totalFormsSubmitted: Int
     let totalErrors24h: Int
     let botRunning: Bool
+    let totalListingsLastCheck: Int?      // Alle Angebote (vor Filter)
+    let filteredListingsLastCheck: Int?   // Passende Angebote (nach Filter)
     
     enum CodingKeys: String, CodingKey {
         case knownListingsCount = "known_listings_count"
@@ -23,6 +25,8 @@ struct MonitorStats: Decodable, Sendable, Equatable {
         case totalFormsSubmitted = "total_forms_submitted"
         case totalErrors24h = "total_errors_24h"
         case botRunning = "bot_running"
+        case totalListingsLastCheck = "total_listings_last_check"
+        case filteredListingsLastCheck = "filtered_listings_last_check"
     }
 }
 

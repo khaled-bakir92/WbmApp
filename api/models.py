@@ -112,6 +112,15 @@ class BotStats(BaseModel):
     total_forms_submitted: int = 0
     total_errors_24h: int = 0
     bot_running: bool = False
+    # New fields for listing statistics
+    total_listings_last_check: int = Field(
+        default=0,
+        description="Total listings found in last check (before filtering)"
+    )
+    filtered_listings_last_check: int = Field(
+        default=0,
+        description="Listings matching filter criteria in last check"
+    )
 
 
 class LogEntry(BaseModel):

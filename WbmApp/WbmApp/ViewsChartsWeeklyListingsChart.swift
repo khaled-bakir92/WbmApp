@@ -13,14 +13,19 @@ import Charts
 struct WeeklyListingsChart: View {
     let weeklyData: [WeeklyListing]
     
-    @State private var selectedWeek: WeeklyListing?
+    @State private var selectedWeekID: String?
+    
+    var selectedWeek: WeeklyListing? {
+        guard let id = selectedWeekID else { return nil }
+        return weeklyData.first { $0.id == id }
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Wöchentliche Übersicht")
+                    Text("Letzter Check")
                         .font(.headline)
                         .fontWeight(.semibold)
                     
@@ -33,48 +38,54 @@ struct WeeklyListingsChart: View {
                 
                 // Legend
                 HStack(spacing: 12) {
-                    LegendItem(color: .blue, label: "Gefunden")
+                    LegendItem(color: .blue, label: "Alle")
                     LegendItem(color: .green, label: "Passend")
                 }
             }
             
             // Chart
-            Chart {
-                ForEach(weeklyData) { week in
-                    // Gefundene Angebote (Total)
-                    BarMark(
-                        x: .value("Woche", week.shortLabel),
-                        y: .value("Anzahl", week.totalCount)
-                    )
-                    .foregroundStyle(.blue.opacity(0.6))
-                    .position(by: .value("Typ", "Gefunden"))
-                    
-                    // Passende Wohnungen (Matched)
-                    BarMark(
-                        x: .value("Woche", week.shortLabel),
-                        y: .value("Anzahl", week.matchedCount)
-                    )
-                    .foregroundStyle(.green.opacity(0.8))
-                    .position(by: .value("Typ", "Passend"))
+            if weeklyData.count > 1 {
+                // Multi-Tag Chart
+                Chart {
+                    ForEach(weeklyData) { week in
+                        // Gefundene Angebote (Total)
+                        BarMark(
+                            x: .value("Tag", week.weekdayLabel),
+                            y: .value("Anzahl", week.totalCount)
+                        )
+                        .foregroundStyle(.blue.opacity(0.6))
+                        .position(by: .value("Typ", "Alle"))
+                        
+                        // Passende Wohnungen (Matched)
+                        BarMark(
+                            x: .value("Tag", week.weekdayLabel),
+                            y: .value("Anzahl", week.matchedCount)
+                        )
+                        .foregroundStyle(.green.opacity(0.8))
+                        .position(by: .value("Typ", "Passend"))
+                    }
                 }
-            }
-            .chartXAxis {
-                AxisMarks(values: .automatic) { value in
-                    AxisGridLine()
-                    AxisValueLabel()
-                        .font(.caption)
+                .chartXAxis {
+                    AxisMarks(values: .automatic) { value in
+                        AxisGridLine()
+                        AxisValueLabel()
+                            .font(.caption)
+                    }
                 }
-            }
-            .chartYAxis {
-                AxisMarks(position: .leading) { value in
-                    AxisGridLine()
-                    AxisValueLabel()
-                        .font(.caption)
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        AxisGridLine()
+                        AxisValueLabel()
+                            .font(.caption)
+                    }
                 }
+                .chartLegend(.hidden)
+                .frame(height: 220)
+                .chartXSelection(value: $selectedWeekID)
+            } else if let single = weeklyData.first {
+                // Single-Day Ansicht (vereinfacht)
+                SingleDayChart(week: single)
             }
-            .chartLegend(.hidden) // Wir haben eigene Legend
-            .frame(height: 220)
-            .chartXSelection(value: $selectedWeek)
             
             // Details für ausgewählte Woche
             if let selected = selectedWeek {
@@ -84,6 +95,89 @@ struct WeeklyListingsChart: View {
                 DetailCard(week: latest)
             }
         }
+    }
+}
+
+// MARK: - Single Day Chart
+
+/// Vereinfachte Ansicht für einen einzelnen Tag
+private struct SingleDayChart: View {
+    let week: WeeklyListing
+    
+    var body: some View {
+        HStack(spacing: 24) {
+            // Alle
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(.blue.opacity(0.15))
+                        .frame(width: 80, height: 80)
+                    
+                    VStack(spacing: 4) {
+                        Text("\(week.totalCount)")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(.blue)
+                        
+                        Text("Alle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            
+            Image(systemName: "arrow.right")
+                .foregroundStyle(.secondary)
+                .font(.title3)
+            
+            // Passend
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(.green.opacity(0.15))
+                        .frame(width: 80, height: 80)
+                    
+                    VStack(spacing: 4) {
+                        Text("\(week.matchedCount)")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(.green)
+                        
+                        Text("Passend")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // Quote
+            VStack(spacing: 8) {
+                let rate = week.totalCount > 0 ? Double(week.matchedCount) / Double(week.totalCount) * 100 : 0
+                
+                ZStack {
+                    Circle()
+                        .stroke(.orange.opacity(0.3), lineWidth: 6)
+                        .frame(width: 80, height: 80)
+                    
+                    Circle()
+                        .trim(from: 0, to: rate / 100)
+                        .stroke(.orange, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .frame(width: 80, height: 80)
+                        .rotationEffect(.degrees(-90))
+                    
+                    VStack(spacing: 4) {
+                        Text(String(format: "%.0f%%", rate))
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(.orange)
+                        
+                        Text("Quote")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .frame(height: 100)
     }
 }
 
@@ -117,45 +211,46 @@ private struct DetailCard: View {
     }
     
     var body: some View {
-        HStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Woche Info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(week.fullLabel)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(week.fullLabel)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    Text(week.formattedDate)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 
-                Text(week.formattedDate)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Spacer()
             }
             
-            Spacer()
+            Divider()
             
-            // Statistiken
-            HStack(spacing: 20) {
+            // Statistiken in einer Reihe
+            HStack(spacing: 0) {
                 StatColumn(
                     value: "\(week.totalCount)",
-                    label: "Gefunden",
+                    label: "Alle",
                     color: .blue
                 )
-                
-                Divider()
-                    .frame(height: 30)
+                .frame(maxWidth: .infinity)
                 
                 StatColumn(
                     value: "\(week.matchedCount)",
                     label: "Passend",
                     color: .green
                 )
-                
-                Divider()
-                    .frame(height: 30)
+                .frame(maxWidth: .infinity)
                 
                 StatColumn(
                     value: String(format: "%.0f%%", matchRate),
-                    label: "Match",
+                    label: "Quote",
                     color: .orange
                 )
+                .frame(maxWidth: .infinity)
             }
         }
         .padding()
@@ -200,6 +295,20 @@ private extension WeeklyListing {
         displayFormatter.locale = Locale(identifier: "de_DE")
         
         return displayFormatter.string(from: date)
+    }
+    
+    /// Wochentag-Label für X-Achse (Mo, Di, Mi, ...)
+    var weekdayLabel: String {
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: startDate) else {
+            return shortLabel // Fallback zu "KW X"
+        }
+        
+        let weekdayFormatter = DateFormatter()
+        weekdayFormatter.locale = Locale(identifier: "de_DE")
+        weekdayFormatter.dateFormat = "E" // Kurzer Wochentag: Mo, Di, Mi, etc.
+        
+        return weekdayFormatter.string(from: date)
     }
 }
 

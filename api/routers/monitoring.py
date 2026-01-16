@@ -85,6 +85,9 @@ async def get_bot_stats(
         last_check = None
         last_listing = None
 
+        total_listings_last = None
+        filtered_listings_last = None
+
         for line in reversed(lines):
             ts = parse_log_timestamp(line)
 
@@ -105,9 +108,23 @@ async def get_bot_stats(
             if "Formular für" in line and "erfolgreich abgesendet" in line:
                 stats.total_forms_submitted += 1
 
+            # Extract total listings from last check: "Gefunden: X Angebote"
+            if total_listings_last is None and "Gefunden:" in line and "Angebote" in line:
+                match = re.search(r"Gefunden:\s*(\d+)\s*Angebote", line)
+                if match:
+                    total_listings_last = int(match.group(1))
+
+            # Extract filtered listings from last check: "Neue gefilterte Angebote gefunden: X"
+            if filtered_listings_last is None and "Neue gefilterte Angebote gefunden:" in line:
+                match = re.search(r"Neue gefilterte Angebote gefunden:\s*(\d+)", line)
+                if match:
+                    filtered_listings_last = int(match.group(1))
+
         stats.last_check_time = last_check
         stats.last_listing_found = last_listing
         stats.total_errors_24h = errors_24h
+        stats.total_listings_last_check = total_listings_last or 0
+        stats.filtered_listings_last_check = filtered_listings_last or 0
 
     return stats
 
