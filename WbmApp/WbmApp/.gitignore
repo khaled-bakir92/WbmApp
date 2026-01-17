@@ -5,3 +5,7 @@
 # Except README.md files
 !README.md
 !**/README.md
+
+# Secrets 
+Secrets.xcconfig
+Secrets.swift
