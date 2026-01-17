@@ -57,7 +57,11 @@ final class DashboardViewModel: ObservableObject {
             // Erstelle wöchentliche Daten aus MonitorStats
             self.listingStats = createListingStatsFromMonitor(stats)
             
+        } catch is CancellationError {
+            // Task wurde abgebrochen - das ist normal, zeige keinen Fehler
+            print("⚠️ Dashboard-Laden wurde abgebrochen")
         } catch {
+            // Nur echte Fehler anzeigen
             errorMessage = "Fehler beim Laden: \(error.localizedDescription)"
         }
         
@@ -96,6 +100,8 @@ final class DashboardViewModel: ObservableObject {
     func refreshStatus() async {
         do {
             botStatus = try await botService.getStatus()
+        } catch is CancellationError {
+            print("⚠️ Status-Update wurde abgebrochen")
         } catch {
             errorMessage = "Status-Update fehlgeschlagen: \(error.localizedDescription)"
         }
@@ -105,6 +111,8 @@ final class DashboardViewModel: ObservableObject {
     func refreshStats() async {
         do {
             monitorStats = try await monitorService.getStats()
+        } catch is CancellationError {
+            print("⚠️ Stats-Update wurde abgebrochen")
         } catch {
             errorMessage = "Stats-Update fehlgeschlagen: \(error.localizedDescription)"
         }

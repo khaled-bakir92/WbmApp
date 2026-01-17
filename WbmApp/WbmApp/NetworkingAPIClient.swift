@@ -163,7 +163,7 @@ enum APIError: Error, LocalizedError {
 // MARK: - Generic Response Models
 
 /// Standard Success Response für Actions ohne spezifischen Return-Wert
-struct SuccessResponse: Decodable {
+struct SuccessResponse: Decodable, Sendable {
     let success: Bool
     let message: String
     let pid: Int?

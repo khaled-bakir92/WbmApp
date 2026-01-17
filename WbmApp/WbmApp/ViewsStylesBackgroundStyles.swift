@@ -27,6 +27,7 @@ struct AppBackgroundStyle: ViewModifier {
 
 enum BackgroundVariant {
     case `default`      // Heller Blau-Gradient
+    case blue           // Kräftiger Blau-Gradient
     case dashboard      // Warmer Gradient für Dashboard
     case config         // Grüner Gradient für Config
     case logs           // Neutraler Gradient für Logs
@@ -39,6 +40,17 @@ enum BackgroundVariant {
                 colors: [
                     Color(red: 0.95, green: 0.97, blue: 1.0),    // Sehr helles Blau
                     Color(red: 0.98, green: 0.99, blue: 1.0)     // Fast Weiß
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            
+        case .blue:
+            return LinearGradient(
+                colors: [
+                    Color(red: 0.85, green: 0.93, blue: 0.99),    // Helles Sky-Blau
+                    Color(red: 0.78, green: 0.89, blue: 0.98),    // Sanftes Blau
+                    Color(red: 0.82, green: 0.91, blue: 0.99)     // Luftiges Blau
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -103,6 +115,7 @@ extension View {
         VStack(spacing: 20) {
             ForEach([
                 ("Default", BackgroundVariant.default),
+                ("Blue", BackgroundVariant.blue),
                 ("Dashboard", BackgroundVariant.dashboard),
                 ("Config", BackgroundVariant.config),
                 ("Logs", BackgroundVariant.logs),
@@ -122,3 +135,4 @@ extension View {
         }
     }
 }
+

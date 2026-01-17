@@ -39,7 +39,7 @@ struct WeeklyListingsChart: View {
                 // Legend
                 HStack(spacing: 12) {
                     LegendItem(color: .blue, label: "Alle")
-                    LegendItem(color: .green, label: "Passend")
+                    LegendItem(color: .indigo, label: "Passend")
                 }
             }
             
@@ -61,7 +61,7 @@ struct WeeklyListingsChart: View {
                             x: .value("Tag", week.weekdayLabel),
                             y: .value("Anzahl", week.matchedCount)
                         )
-                        .foregroundStyle(.green.opacity(0.8))
+                        .foregroundStyle(.indigo.opacity(0.7))
                         .position(by: .value("Typ", "Passend"))
                     }
                 }
@@ -133,13 +133,13 @@ private struct SingleDayChart: View {
             VStack(spacing: 8) {
                 ZStack {
                     Circle()
-                        .fill(.green.opacity(0.15))
+                        .fill(.indigo.opacity(0.15))
                         .frame(width: 80, height: 80)
                     
                     VStack(spacing: 4) {
                         Text("\(week.matchedCount)")
                             .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(.green)
+                            .foregroundStyle(.indigo)
                         
                         Text("Passend")
                             .font(.caption)
@@ -156,19 +156,19 @@ private struct SingleDayChart: View {
                 
                 ZStack {
                     Circle()
-                        .stroke(.orange.opacity(0.3), lineWidth: 6)
+                        .stroke(.blue.opacity(0.25), lineWidth: 6)
                         .frame(width: 80, height: 80)
                     
                     Circle()
                         .trim(from: 0, to: rate / 100)
-                        .stroke(.orange, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .stroke(.blue, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                         .frame(width: 80, height: 80)
                         .rotationEffect(.degrees(-90))
                     
                     VStack(spacing: 4) {
                         Text(String(format: "%.0f%%", rate))
                             .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.blue)
                         
                         Text("Quote")
                             .font(.caption2)
@@ -241,14 +241,14 @@ private struct DetailCard: View {
                 StatColumn(
                     value: "\(week.matchedCount)",
                     label: "Passend",
-                    color: .green
+                    color: .indigo
                 )
                 .frame(maxWidth: .infinity)
                 
                 StatColumn(
                     value: String(format: "%.0f%%", matchRate),
                     label: "Quote",
-                    color: .orange
+                    color: .blue
                 )
                 .frame(maxWidth: .infinity)
             }

@@ -9,19 +9,19 @@ import Foundation
 // Uses KeychainHelper for production token loading
 
 /// Zentrale Konfiguration für API-Zugriff
-struct APIConfig {
+struct APIConfig: Sendable {
     /// Base URL des lokalen FastAPI Backends
-    static let baseURL = "http://127.0.0.1:8000"
+    nonisolated(unsafe) static let baseURL = "http://127.0.0.1:8000"
     
     #if DEBUG
     /// Bearer Token für Authentifizierung (Debug: Aus Secrets.swift)
-    static let bearerToken: String = Secrets.bearerToken
+    nonisolated(unsafe) static let bearerToken: String = Secrets.bearerToken
     #else
     /// Bearer Token für Authentifizierung (Production: Aus Keychain)
     /// Hinweis: Vor App-Start muss der Token einmalig in die Keychain gespeichert werden.
     /// Beispiel zum Setzen (z.B. in AppDelegate/Setup):
     /// `KeychainHelper.shared.saveBearerToken("<TOKEN>")`
-    static let bearerToken: String = {
+    nonisolated(unsafe) static let bearerToken: String = {
         if let token = KeychainHelper.shared.readBearerToken(), !token.isEmpty {
             return token
         } else {
@@ -32,7 +32,7 @@ struct APIConfig {
     #endif
     
     /// Vollständige URL für einen Endpoint
-    static func url(for path: String) -> URL? {
+    nonisolated(unsafe) static func url(for path: String) -> URL? {
         return URL(string: baseURL + path)
     }
 }

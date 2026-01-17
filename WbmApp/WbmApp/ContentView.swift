@@ -9,64 +9,58 @@
 
 import SwiftUI
 import Combine
+import UIKit
 
 // MARK: - Dashboard Screen (mit Liquid Glass Design)
 
 struct DashboardScreen: View {
     @StateObject private var viewModel = DashboardViewModel()
     @State private var showBackendCheck = false
+    @State private var isRefreshing = false
+    
+    // Attempts to load the app's primary icon image from the bundle.
+    private var appIconImage: Image? {
+        if let iconsDict = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
+           let primaryIcon = iconsDict["CFBundlePrimaryIcon"] as? [String: Any],
+           let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String],
+           let iconName = iconFiles.last,
+           let uiImage = UIImage(named: iconName) {
+            return Image(uiImage: uiImage)
+        }
+        return nil
+    }
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Welcome Card
-                    GlassCard(tint: .blue.opacity(0.15), interactive: true) {
-                        HStack(spacing: 16) {
+                    // App Logo - Zentriert oben
+                    HStack {
+                        Spacer()
+                        
+                        if let appIcon = appIconImage {
+                            appIcon
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 80, height: 80)
+                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
+                        } else {
                             Image(systemName: "house.fill")
-                                .font(.system(size: 40))
+                                .font(.system(size: 56))
                                 .foregroundStyle(.blue)
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Willkommen!")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                
-                                Text("Immobilien Bot Dashboard")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            
-                            Spacer()
-                        }
-                    }
-                    
-                    // Statistik-Karten (aus MonitorStats)
-                    if let stats = viewModel.monitorStats {
-                        // Zwei Statistik-Karten nebeneinander
-                        HStack(spacing: 16) {
-                            // Alle Angebote (vor Filter)
-                            StatisticCard(
-                                title: "Gefundene Angebote",
-                                value: "\(stats.totalListingsLastCheck ?? 0)",
-                                subtitle: "Beim letzten Check",
-                                icon: "magnifyingglass",
-                                tint: .blue
-                            )
-                            
-                            // Passende Wohnungen (nach Filter)
-                            StatisticCard(
-                                title: "Passende Wohnungen",
-                                value: "\(stats.filteredListingsLastCheck ?? 0)",
-                                subtitle: "Nach Filterung",
-                                icon: "checkmark.circle.fill",
-                                tint: .green
-                            )
                         }
                         
+                        Spacer()
+                    }
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+                    
+                    // Statistik-Karten (aus MonitorStats)
+                    if let _ = viewModel.monitorStats {
                         // Wöchentliches Chart für Vergleich
                         if let listingStats = viewModel.listingStats, !listingStats.weeklyData.isEmpty {
-                            GlassCard(tint: .purple.opacity(0.1)) {
+                            GlassCard {
                                 WeeklyListingsChart(weeklyData: listingStats.weeklyData)
                             }
                         }
@@ -82,9 +76,9 @@ struct DashboardScreen: View {
                         }
                     }
                     
-                    // Status Overview Card
+                    // Status Overview Card - Liquid Glass ohne Farbe
                     if let status = viewModel.botStatus {
-                        GlassCard(tint: status.running ? .green.opacity(0.2) : .red.opacity(0.15)) {
+                        GlassCard {
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack {
                                     Text(status.statusIndicator)
@@ -148,39 +142,7 @@ struct DashboardScreen: View {
                         }
                     }
                     
-                    // Quick Stats
-                    if let stats = viewModel.monitorStats {
-                        GlassCard(tint: .purple.opacity(0.15)) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack {
-                                    Text("📊 System Statistiken")
-                                        .font(.headline)
-                                    Spacer()
-                                    Text(stats.healthStatus.emoji)
-                                        .font(.title2)
-                                }
-                                
-                                HStack(spacing: 20) {
-                                    StatItem(
-                                        value: "\(stats.totalFormsSubmitted)",
-                                        label: "Bewerbungen",
-                                        icon: "paperplane.fill"
-                                    )
-                                    
-                                    Divider()
-                                    
-                                    StatItem(
-                                        value: "\(stats.totalErrors24h)",
-                                        label: "Fehler (24h)",
-                                        icon: "exclamationmark.triangle"
-                                    )
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                        }
-                    }
-                    
-                    // Quick Actions
+                    // Quick Actions - Liquid Glass ohne Farbe
                     GlassSection("⚡️ Schnellzugriff") {
                         VStack(spacing: 12) {
                             GlassActionButton(
@@ -217,9 +179,9 @@ struct DashboardScreen: View {
                         }
                     }
                     
-                    // Error Message
-                    if let error = viewModel.errorMessage {
-                        GlassCard(tint: .red.opacity(0.2)) {
+                    // Error Message - Liquid Glass ohne Farbe, nur Icons in Rot
+                    if let error = viewModel.errorMessage, !error.contains("cancelled") && !error.contains("canceled") {
+                        GlassCard {
                             HStack(spacing: 12) {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .foregroundStyle(.red)
@@ -252,24 +214,20 @@ struct DashboardScreen: View {
                 }
                 .padding()
             }
-            .navigationTitle("Dashboard")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task { await viewModel.loadDashboard() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .disabled(viewModel.isLoading)
-                }
+            .refreshable {
+                await viewModel.loadDashboard()
             }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .task {
+                // Verhindere doppeltes Laden wenn bereits geladen wurde
+                guard viewModel.botStatus == nil else { return }
                 await viewModel.loadDashboard()
             }
             .sheet(isPresented: $showBackendCheck) {
                 BackendCheckSheet()
             }
-            .appBackground(.dashboard)
+            .appBackground(.blue)
         }
     }
 }
@@ -1243,34 +1201,64 @@ struct SettingsScreen: View {
                     
                     // User Config Card
                     GlassSection("👤 Benutzer", tint: .purple.opacity(0.15)) {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 16) {
                             if let user = vm.user {
-                                GlassInfoRow(
-                                    label: "Name",
-                                    value: user.userData.fullName
-                                )
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Adresse")
-                                        .font(.subheadline)
+                                // Name Section
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Name")
+                                        .font(.caption)
                                         .foregroundStyle(.secondary)
-                                    Text(user.userData.fullAddress)
-                                        .font(.body)
+                                        .textCase(.uppercase)
+                                    
+                                    Text(user.userData.fullName)
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
                                 }
                                 
                                 Divider()
                                 
-                                GlassInfoRow(
-                                    label: "E-Mail",
-                                    value: user.userData.email,
-                                    icon: "envelope"
-                                )
+                                // Adresse Section
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Adresse")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .textCase(.uppercase)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(user.userData.strasse)
+                                            .font(.body)
+                                        Text("\(user.userData.plz) \(user.userData.ort)")
+                                            .font(.body)
+                                    }
+                                }
                                 
-                                GlassInfoRow(
-                                    label: "Telefon",
-                                    value: user.userData.telefon,
-                                    icon: "phone"
-                                )
+                                Divider()
+                                
+                                // Kontakt Section
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Kontakt")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .textCase(.uppercase)
+                                    
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "envelope.fill")
+                                            .foregroundStyle(.blue)
+                                            .frame(width: 24)
+                                        
+                                        Text(user.userData.email)
+                                            .font(.body)
+                                    }
+                                    
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "phone.fill")
+                                            .foregroundStyle(.green)
+                                            .frame(width: 24)
+                                        
+                                        Text(user.userData.telefon)
+                                            .font(.body)
+                                    }
+                                }
                                 
                                 // Benachrichtigungen-Teil ausgeblendet auf Benutzerwunsch
                                 /*
