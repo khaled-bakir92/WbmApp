@@ -30,10 +30,59 @@ final class DashboardViewModel: ObservableObject {
     private let configService = ConfigService()
     private let monitorService = MonitorService()
     
+    // MARK: - Timer für Auto-Refresh
+    
+    private var refreshTimer: Timer?
+    private let refreshInterval: TimeInterval = 10.0 // Alle 10 Sekunden
+    
     // MARK: - Initialization
     
     init() {
-        // Initial load könnte hier stattfinden
+        // Auto-Refresh starten
+        startAutoRefresh()
+    }
+    
+    deinit {
+        // Timer direkt invalidieren (synchron, kein Actor-Kontext nötig)
+        refreshTimer?.invalidate()
+    }
+    
+    // MARK: - Auto-Refresh
+    
+    /// Startet automatisches Aktualisieren der Daten
+    private func startAutoRefresh() {
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.silentRefresh()
+            }
+        }
+    }
+    
+    /// Stoppt automatisches Aktualisieren
+    func stopAutoRefresh() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+    
+    /// Aktualisiert Daten im Hintergrund ohne Loading-Indicator
+    private func silentRefresh() async {
+        do {
+            // Gleichzeitig Status und Stats laden
+            async let statusTask = botService.getStatus()
+            async let statsTask = monitorService.getStats()
+            
+            let (status, stats) = try await (statusTask, statsTask)
+            
+            self.botStatus = status
+            self.monitorStats = stats
+            self.listingStats = createListingStatsFromMonitor(stats)
+            
+        } catch is CancellationError {
+            // Ignorieren
+        } catch {
+            // Bei automatischen Updates nur loggen, kein UI-Fehler
+            print("⚠️ Silent Refresh fehlgeschlagen: \(error.localizedDescription)")
+        }
     }
     
     // MARK: - Data Loading
@@ -110,7 +159,10 @@ final class DashboardViewModel: ObservableObject {
     /// Lädt nur die Statistiken
     func refreshStats() async {
         do {
-            monitorStats = try await monitorService.getStats()
+            let stats = try await monitorService.getStats()
+            self.monitorStats = stats
+            // ✅ WICHTIG: Auch listingStats aktualisieren!
+            self.listingStats = createListingStatsFromMonitor(stats)
         } catch is CancellationError {
             print("⚠️ Stats-Update wurde abgebrochen")
         } catch {
@@ -128,7 +180,9 @@ final class DashboardViewModel: ObservableObject {
         do {
             let response = try await botService.startWithDefaults()
             print("✅ Bot gestartet: \(response.message)")
+            // ✅ Status UND Stats aktualisieren
             await refreshStatus()
+            await refreshStats()
         } catch {
             errorMessage = "Bot-Start fehlgeschlagen: \(error.localizedDescription)"
         }
@@ -144,7 +198,9 @@ final class DashboardViewModel: ObservableObject {
         do {
             let response = try await botService.stop()
             print("✅ Bot gestoppt: \(response.message)")
+            // ✅ Status UND Stats aktualisieren
             await refreshStatus()
+            await refreshStats()
         } catch {
             errorMessage = "Bot-Stop fehlgeschlagen: \(error.localizedDescription)"
         }
@@ -160,7 +216,9 @@ final class DashboardViewModel: ObservableObject {
         do {
             let response = try await botService.restart()
             print("✅ Bot neugestartet: \(response.message)")
+            // ✅ Status UND Stats aktualisieren
             await refreshStatus()
+            await refreshStats()
         } catch {
             errorMessage = "Bot-Neustart fehlgeschlagen: \(error.localizedDescription)"
         }
