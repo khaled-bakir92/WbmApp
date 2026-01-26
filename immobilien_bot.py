@@ -803,7 +803,7 @@ if __name__ == "__main__":
     # Command-Line-Argumente definieren
     parser = argparse.ArgumentParser(description='WBM Wohnungsbot mit Filteroptionen')
     parser.add_argument('--config', action='store_true', help='Nur Konfiguration der Filter starten')
-    parser.add_argument('--interval', type=int, default=1800, help='Überprüfungsintervall in Sekunden (Standard: 1800)')
+    parser.add_argument('--interval', type=int, default=900, help='Überprüfungsintervall in Sekunden (Standard: 900)')
     parser.add_argument('--gui', action='store_true', help='Browser im GUI-Modus starten (nicht headless)')
     
     args = parser.parse_args()
