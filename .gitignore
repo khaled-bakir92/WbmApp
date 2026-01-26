@@ -31,3 +31,7 @@ Thumbs.db
 # Markdown 
 *.md
 !README.md
+
+# Xcode user files
+*.xcuserstate
+xcuserdata/

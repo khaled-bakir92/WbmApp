@@ -9,3 +9,7 @@
 # Secrets 
 Secrets.xcconfig
 Secrets.swift
+
+# Xcode user files
+*.xcuserstate
+xcuserdata/
