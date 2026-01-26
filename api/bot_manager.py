@@ -240,9 +240,9 @@ class BotManager:
         Returns:
             Tuple of (success, message, pid)
         """
-        # Use previous values if not specified
+        # Use config default if not specified
         if interval is None:
-            interval = self._interval or self.settings.default_interval
+            interval = self.settings.default_interval
         if gui is None:
             gui = self._gui_mode or not self.settings.default_headless
 
