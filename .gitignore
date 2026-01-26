@@ -1,0 +1,35 @@
+cat > .gitignore << 'EOF'
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+
+# Logs & runtime
+logs/
+cache/
+temp/
+screenshots/
+
+# Browser automation
+chrome/
+chromedriver/
+firefox/
+geckodriver/
+
+# OS
+.DS_Store
+.localized
+
+# Backups
+*.backup
+*.bfg-report
+api.backup/
+
+# Data
+data/
+EOF
+
+# Markdown
+*.md
+!README.md
