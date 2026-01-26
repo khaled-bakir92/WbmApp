@@ -3,13 +3,15 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field, EmailStr
 
+from .config import settings
+
 
 # ============== Bot Lifecycle Models ==============
 
 class BotStartRequest(BaseModel):
     """Request body for starting the bot."""
     interval: int = Field(
-        default=1800,
+        default=settings.default_interval,
         ge=60,
         le=86400,
         description="Check interval in seconds (60-86400)"

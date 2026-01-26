@@ -121,7 +121,7 @@ class BotManager:
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return {}
 
-    def start(self, interval: int = 1800, gui: bool = False) -> tuple[bool, str, Optional[int]]:
+    def start(self, interval: int = None, gui: bool = False) -> tuple[bool, str, Optional[int]]:
         """
         Start the bot as a subprocess.
 
@@ -134,6 +134,10 @@ class BotManager:
         """
         if self.is_running():
             return False, "Bot is already running", self.get_pid()
+
+        # Use default from settings if not provided
+        if interval is None:
+            interval = self.settings.default_interval
 
         # Build command
         python_exe = sys.executable
