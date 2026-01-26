@@ -27,6 +27,7 @@ enum APIEndpoint {
     // MARK: - Monitoring
     case monitorStats
     case monitorLogs(lines: Int)
+    case appliedListings
     case screenshots
     case screenshot(filename: String)
     
@@ -59,6 +60,8 @@ enum APIEndpoint {
             return "/api/monitor/stats"
         case .monitorLogs(let lines):
             return "/api/monitor/logs?lines=\(lines)"
+        case .appliedListings:
+            return "/api/monitor/listings"
         case .screenshots:
             return "/api/monitor/screenshots"
         case .screenshot(let filename):
@@ -70,8 +73,8 @@ enum APIEndpoint {
     
     var method: HTTPMethod {
         switch self {
-        case .health, .botStatus, .filterConfig, .userConfig, 
-             .monitorStats, .monitorLogs, .screenshots, .screenshot:
+        case .health, .botStatus, .filterConfig, .userConfig,
+             .monitorStats, .monitorLogs, .appliedListings, .screenshots, .screenshot:
             return .get
             
         case .botStart, .botStop, .botRestart:

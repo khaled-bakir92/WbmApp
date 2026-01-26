@@ -47,7 +47,8 @@ class WBMBot:
         self.check_interval = check_interval
         self.headless = headless
         self.known_listings = set()
-        
+        self.applied_listings = []  # Liste der beworbenen Wohnungen mit Details
+
         # Benutzerdaten und Filter aus JSON-Dateien laden
         self.user_data = {}
         self.notification_email = {}
@@ -58,7 +59,8 @@ class WBMBot:
         
         # Laden gespeicherter Angebote, falls vorhanden
         self.load_known_listings()
-        
+        self.load_applied_listings()
+
         # Browser initialisieren
         self.setup_browser()
     
@@ -178,7 +180,37 @@ class WBMBot:
             logging.info(f"{len(self.known_listings)} Angebote gespeichert")
         except Exception as e:
             logging.error(f"Fehler beim Speichern bekannter Angebote: {e}")
-    
+
+    def load_applied_listings(self):
+        """Lädt bereits beworbene Angebote mit Details aus einer Datei"""
+        try:
+            filepath = os.path.join(DATA_DIR, 'applied_listings.json')
+            if os.path.exists(filepath):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    self.applied_listings = json.load(f)
+                logging.info(f"Geladen: {len(self.applied_listings)} beworbene Angebote")
+            else:
+                logging.info("Keine beworbenen Angebote gefunden, beginne mit leerer Liste")
+        except Exception as e:
+            logging.error(f"Fehler beim Laden beworbener Angebote: {e}")
+
+    def save_applied_listing(self, listing):
+        """Speichert ein beworbenes Angebot mit allen Details"""
+        try:
+            from datetime import datetime
+            listing_with_timestamp = {
+                **listing,
+                "applied_at": datetime.now().isoformat()
+            }
+            self.applied_listings.append(listing_with_timestamp)
+
+            filepath = os.path.join(DATA_DIR, 'applied_listings.json')
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(self.applied_listings, f, ensure_ascii=False, indent=2)
+            logging.info(f"Beworbenes Angebot gespeichert: {listing.get('titel', 'Unbekannt')}")
+        except Exception as e:
+            logging.error(f"Fehler beim Speichern des beworbenen Angebots: {e}")
+
     def load_filter_settings(self):
         """Lädt Filter-Einstellungen aus filter.json"""
         filepath = os.path.join(DATA_DIR, 'filter.json')
@@ -727,6 +759,7 @@ class WBMBot:
                         success = self.fill_contact_form(listing)
                         if success:
                             logging.info(f"Anfrage für {listing.get('titel', 'Angebot')} erfolgreich")
+                            self.save_applied_listing(listing)
                         else:
                             logging.warning(f"Anfrage für {listing.get('titel', 'Angebot')} fehlgeschlagen")
                         

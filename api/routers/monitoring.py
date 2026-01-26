@@ -13,7 +13,14 @@ from fastapi.responses import FileResponse
 from ..auth import AuthDep
 from ..bot_manager import BotManager, get_bot_manager
 from ..config import Settings, get_settings
-from ..models import BotStats, LogsResponse, ScreenshotInfo, ScreenshotsListResponse
+from ..models import (
+    AppliedListing,
+    AppliedListingsResponse,
+    BotStats,
+    LogsResponse,
+    ScreenshotInfo,
+    ScreenshotsListResponse,
+)
 
 
 router = APIRouter(prefix="/api/monitor", tags=["Monitoring"])
@@ -61,19 +68,29 @@ async def get_bot_stats(
     """
     Get bot statistics from logs and data files.
 
-    Includes known listings count, last check time, error counts, etc.
+    Includes known listings count, applied listings count, last check time, error counts, etc.
     """
     stats = BotStats(
         known_listings_count=0,
+        applied_listings_count=0,
         bot_running=manager.is_running(),
     )
 
-    # Count known listings
+    # Count known listings (all listings ever seen)
     if settings.known_listings.exists():
         try:
             with open(settings.known_listings, "r") as f:
                 listings = json.load(f)
                 stats.known_listings_count = len(listings)
+        except (json.JSONDecodeError, IOError):
+            pass
+
+    # Count applied listings (forms submitted)
+    if settings.applied_listings.exists():
+        try:
+            with open(settings.applied_listings, "r") as f:
+                applied = json.load(f)
+                stats.applied_listings_count = len(applied)
         except (json.JSONDecodeError, IOError):
             pass
 
@@ -233,4 +250,46 @@ async def get_screenshot(
         path=file_path,
         media_type="image/png",
         filename=filename,
+    )
+
+
+@router.get("/listings", response_model=AppliedListingsResponse)
+async def get_applied_listings(
+    _: AuthDep,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AppliedListingsResponse:
+    """
+    Get list of all applied/contacted listings with full details.
+
+    Returns listings that have been automatically contacted through the bot.
+    """
+    listings = []
+
+    if settings.applied_listings.exists():
+        try:
+            with open(settings.applied_listings, "r", encoding="utf-8") as f:
+                raw_listings = json.load(f)
+
+            for item in raw_listings:
+                listings.append(AppliedListing(
+                    id=item.get("id"),
+                    titel=item.get("titel", "Unbekannt"),
+                    adresse=item.get("adresse", "Unbekannt"),
+                    area=item.get("area", "Unbekannt"),
+                    warmmiete=str(item.get("warmmiete", "?")),
+                    zimmer=str(item.get("zimmer", "?")),
+                    has_wbs=item.get("has_wbs", False),
+                    url=item.get("url", ""),
+                    applied_at=item.get("applied_at"),
+                ))
+        except (json.JSONDecodeError, IOError) as e:
+            # Return empty list if file is corrupted
+            pass
+
+    # Sort by applied_at (newest first)
+    listings.sort(key=lambda x: x.applied_at or "", reverse=True)
+
+    return AppliedListingsResponse(
+        listings=listings,
+        total_count=len(listings),
     )

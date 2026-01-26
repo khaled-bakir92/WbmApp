@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     filter_config: Path = data_dir / "filter.json"
     user_config: Path = data_dir / "user.json"
     known_listings: Path = data_dir / "known_listings.json"
+    applied_listings: Path = data_dir / "applied_listings.json"
     archived_listings: Path = data_dir / "archived_listings.json"
     blacklist_file: Path = data_dir / "blacklist.json"
     

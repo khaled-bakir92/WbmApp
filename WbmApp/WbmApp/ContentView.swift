@@ -16,6 +16,7 @@ import UIKit
 struct DashboardScreen: View {
     @StateObject private var viewModel = DashboardViewModel()
     @State private var showBackendCheck = false
+    @State private var showAppliedListings = false
     @State private var isRefreshing = false
     
     // Attempts to load the app's primary icon image from the bundle.
@@ -146,6 +147,15 @@ struct DashboardScreen: View {
                     GlassSection("⚡️ Schnellzugriff") {
                         VStack(spacing: 12) {
                             GlassActionButton(
+                                title: "Beworbene Wohnungen",
+                                icon: "house.fill",
+                                action: {
+                                    showAppliedListings = true
+                                },
+                                tint: .green
+                            )
+
+                            GlassActionButton(
                                 title: "Backend Check",
                                 icon: "checkmark.shield",
                                 action: {
@@ -226,6 +236,9 @@ struct DashboardScreen: View {
             }
             .sheet(isPresented: $showBackendCheck) {
                 BackendCheckSheet()
+            }
+            .sheet(isPresented: $showAppliedListings) {
+                AppliedListingsView()
             }
             .appBackground(.blue)
         }

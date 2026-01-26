@@ -51,8 +51,18 @@ final class MonitorService: ObservableObject {
         return try await getLogs(lines: lines)
     }
     
+    // MARK: - Applied Listings
+
+    /// Holt alle beworbenen Wohnungen mit Details
+    func getAppliedListings() async throws -> AppliedListingsResponse {
+        return try await client.request(
+            method: .get,
+            path: APIEndpoint.appliedListings.path
+        )
+    }
+
     // MARK: - Screenshots
-    
+
     /// Listet alle verfügbaren Screenshots auf
     func listScreenshots() async throws -> ScreenshotListResponse {
         return try await client.request(

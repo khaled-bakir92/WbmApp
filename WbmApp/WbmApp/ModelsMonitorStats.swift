@@ -9,17 +9,19 @@ import Foundation
 
 /// Response-Model für GET /api/monitor/stats
 struct MonitorStats: Decodable, Sendable, Equatable {
-    let knownListingsCount: Int
+    let knownListingsCount: Int           // Alle jemals gefundenen Wohnungen
+    let appliedListingsCount: Int         // Beworbene Wohnungen (Formulare abgeschickt)
     let lastCheckTime: String?
     let lastListingFound: String?
     let totalFormsSubmitted: Int
     let totalErrors24h: Int
     let botRunning: Bool
-    let totalListingsLastCheck: Int?      // Alle Angebote (vor Filter)
-    let filteredListingsLastCheck: Int?   // Passende Angebote (nach Filter)
-    
+    let totalListingsLastCheck: Int?      // Alle Angebote beim letzten Check (vor Filter)
+    let filteredListingsLastCheck: Int?   // Passende Angebote beim letzten Check (nach Filter)
+
     enum CodingKeys: String, CodingKey {
         case knownListingsCount = "known_listings_count"
+        case appliedListingsCount = "applied_listings_count"
         case lastCheckTime = "last_check_time"
         case lastListingFound = "last_listing_found"
         case totalFormsSubmitted = "total_forms_submitted"

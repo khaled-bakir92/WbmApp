@@ -106,13 +106,17 @@ class UserConfigUpdate(BaseModel):
 
 class BotStats(BaseModel):
     """Bot statistics extracted from logs and data files."""
-    known_listings_count: int = Field(description="Total known listings")
+    known_listings_count: int = Field(description="Total known listings (all ever seen)")
+    applied_listings_count: int = Field(
+        default=0,
+        description="Total listings that were applied to (forms submitted)"
+    )
     last_check_time: Optional[datetime] = None
     last_listing_found: Optional[datetime] = None
     total_forms_submitted: int = 0
     total_errors_24h: int = 0
     bot_running: bool = False
-    # New fields for listing statistics
+    # Legacy fields for listing statistics (kept for backwards compatibility)
     total_listings_last_check: int = Field(
         default=0,
         description="Total listings found in last check (before filtering)"
@@ -147,6 +151,27 @@ class ScreenshotInfo(BaseModel):
 class ScreenshotsListResponse(BaseModel):
     """Response for screenshots list endpoint."""
     screenshots: list[ScreenshotInfo]
+    total_count: int
+
+
+# ============== Applied Listings Models ==============
+
+class AppliedListing(BaseModel):
+    """Details of an applied/contacted listing."""
+    id: Optional[str] = Field(default=None, description="Listing ID")
+    titel: str = Field(description="Listing title")
+    adresse: str = Field(description="Street address")
+    area: str = Field(description="District/Area")
+    warmmiete: str = Field(description="Warm rent in EUR")
+    zimmer: str = Field(description="Number of rooms")
+    has_wbs: bool = Field(default=False, description="WBS requirement")
+    url: str = Field(description="Listing URL")
+    applied_at: Optional[datetime] = Field(default=None, description="When the form was submitted")
+
+
+class AppliedListingsResponse(BaseModel):
+    """Response for applied listings endpoint."""
+    listings: list[AppliedListing]
     total_count: int
 
 

@@ -25,21 +25,21 @@ struct WeeklyListingsChart: View {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Letzter Check")
+                    Text("Wohnungsstatistik")
                         .font(.headline)
                         .fontWeight(.semibold)
-                    
-                    Text("Gefundene vs. Passende Wohnungen")
+
+                    Text("Gefundene vs. Beworbene Wohnungen")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 // Legend
                 HStack(spacing: 12) {
-                    LegendItem(color: .blue, label: "Alle")
-                    LegendItem(color: .indigo, label: "Passend")
+                    LegendItem(color: .blue, label: "Gefunden")
+                    LegendItem(color: .indigo, label: "Beworben")
                 }
             }
             
@@ -103,45 +103,45 @@ struct WeeklyListingsChart: View {
 /// Vereinfachte Ansicht für einen einzelnen Tag
 private struct SingleDayChart: View {
     let week: WeeklyListing
-    
+
     var body: some View {
         HStack(spacing: 24) {
-            // Alle
+            // Gefunden
             VStack(spacing: 8) {
                 ZStack {
                     Circle()
                         .fill(.blue.opacity(0.15))
                         .frame(width: 80, height: 80)
-                    
+
                     VStack(spacing: 4) {
                         Text("\(week.totalCount)")
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(.blue)
-                        
-                        Text("Alle")
+
+                        Text("Gefunden")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
-            
+
             Image(systemName: "arrow.right")
                 .foregroundStyle(.secondary)
                 .font(.title3)
-            
-            // Passend
+
+            // Beworben
             VStack(spacing: 8) {
                 ZStack {
                     Circle()
                         .fill(.indigo.opacity(0.15))
                         .frame(width: 80, height: 80)
-                    
+
                     VStack(spacing: 4) {
                         Text("\(week.matchedCount)")
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(.indigo)
-                        
-                        Text("Passend")
+
+                        Text("Beworben")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -233,18 +233,18 @@ private struct DetailCard: View {
             HStack(spacing: 0) {
                 StatColumn(
                     value: "\(week.totalCount)",
-                    label: "Alle",
+                    label: "Gefunden",
                     color: .blue
                 )
                 .frame(maxWidth: .infinity)
-                
+
                 StatColumn(
                     value: "\(week.matchedCount)",
-                    label: "Passend",
+                    label: "Beworben",
                     color: .indigo
                 )
                 .frame(maxWidth: .infinity)
-                
+
                 StatColumn(
                     value: String(format: "%.0f%%", matchRate),
                     label: "Quote",

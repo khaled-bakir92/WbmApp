@@ -118,30 +118,31 @@ final class DashboardViewModel: ObservableObject {
     }
     
     /// Konvertiert MonitorStats in ListingStats für Chart
-    /// Zeigt nur den aktuellen Tag (letzter Check)
+    /// Zeigt Gesamtstatistiken: alle gefundenen vs. alle beworbenen Wohnungen
     private func createListingStatsFromMonitor(_ stats: MonitorStats) -> ListingStats {
         let calendar = Calendar.current
         let now = Date()
         let weekNumber = calendar.component(.weekOfYear, from: now)
         let year = calendar.component(.year, from: now)
-        
+
         let formatter = ISO8601DateFormatter()
         let startDate = formatter.string(from: now)
-        
+
+        // Zeigt Gesamtzahlen: alle gefundenen Wohnungen vs. alle beworbenen
         let weeklyListing = WeeklyListing(
             id: "\(year)-W\(weekNumber)",
             weekNumber: weekNumber,
             year: year,
-            totalCount: stats.totalListingsLastCheck ?? 0,
-            matchedCount: stats.filteredListingsLastCheck ?? 0,
+            totalCount: stats.knownListingsCount,           // Alle jemals gefundenen Wohnungen
+            matchedCount: stats.appliedListingsCount,       // Alle beworbenen Wohnungen
             startDate: startDate
         )
-        
+
         return ListingStats(
-            totalListings: stats.knownListingsCount,
-            matchedListings: stats.filteredListingsLastCheck ?? 0,
-            appliedListings: stats.totalFormsSubmitted,
-            weeklyData: [weeklyListing] // Nur ein Eintrag: der letzte Check
+            totalListings: stats.knownListingsCount,        // Alle gefundenen
+            matchedListings: stats.appliedListingsCount,    // Alle beworbenen
+            appliedListings: stats.appliedListingsCount,    // Gleich wie beworbene
+            weeklyData: [weeklyListing]
         )
     }
     
