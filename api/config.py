@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     # =========================
     # Bot defaults
     # =========================
-    default_interval: int = 1800
+    default_interval: int = 900
     default_headless: bool = True
     max_retries: int = 3
     timeout: int = 30

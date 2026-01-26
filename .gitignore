@@ -33,3 +33,12 @@ EOF
 # Markdown
 *.md
 !README.md
+
+# Secrets (never commit)
+Secrets.swift
+Secrets.xcconfig
+
+# Xcode user files
+*.xcuserstate
+xcuserdata/
+
