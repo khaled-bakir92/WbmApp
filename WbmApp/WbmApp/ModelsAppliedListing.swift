@@ -64,18 +64,24 @@ extension AppliedListing {
             return "Unbekannt"
         }
 
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        // Versuche einfaches DateFormatter (flexibler als ISO8601)
+        let inputFormatter = DateFormatter()
+        inputFormatter.locale = Locale(identifier: "en_US_POSIX")
 
-        // Versuche mit Millisekunden
-        if let date = formatter.date(from: appliedAt) {
-            return formatDate(date)
-        }
+        // Format: "2026-01-28T14:55:07.210710" (ohne Timezone)
+        let formats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ssZ",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        ]
 
-        // Versuche ohne Millisekunden
-        formatter.formatOptions = [.withInternetDateTime]
-        if let date = formatter.date(from: appliedAt) {
-            return formatDate(date)
+        for format in formats {
+            inputFormatter.dateFormat = format
+            if let date = inputFormatter.date(from: appliedAt) {
+                return formatDate(date)
+            }
         }
 
         return appliedAt

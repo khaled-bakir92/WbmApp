@@ -19,44 +19,10 @@ struct DashboardScreen: View {
     @State private var showAppliedListings = false
     @State private var isRefreshing = false
     
-    // Attempts to load the app's primary icon image from the bundle.
-    private var appIconImage: Image? {
-        if let iconsDict = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
-           let primaryIcon = iconsDict["CFBundlePrimaryIcon"] as? [String: Any],
-           let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String],
-           let iconName = iconFiles.last,
-           let uiImage = UIImage(named: iconName) {
-            return Image(uiImage: uiImage)
-        }
-        return nil
-    }
-    
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // App Logo - Zentriert oben
-                    HStack {
-                        Spacer()
-                        
-                        if let appIcon = appIconImage {
-                            appIcon
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 80, height: 80)
-                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                                .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
-                        } else {
-                            Image(systemName: "house.fill")
-                                .font(.system(size: 56))
-                                .foregroundStyle(.blue)
-                        }
-                        
-                        Spacer()
-                    }
-                    .padding(.top, 16)
-                    .padding(.bottom, 8)
-                    
                     // Statistik-Karten (aus MonitorStats)
                     if let _ = viewModel.monitorStats {
                         // Wöchentliches Chart für Vergleich
@@ -239,6 +205,7 @@ struct DashboardScreen: View {
             }
             .sheet(isPresented: $showAppliedListings) {
                 AppliedListingsView()
+                    .presentationDragIndicator(.visible)
             }
             .appBackground(.blue)
         }

@@ -26,6 +26,10 @@ final class AppliedListingsViewModel: ObservableObject {
         do {
             let response = try await monitorService.getAppliedListings()
             listings = response.listings
+        } catch is CancellationError {
+            // Ignorieren - passiert beim Schließen des Sheets
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            // Ignorieren - Netzwerk-Anfrage wurde abgebrochen
         } catch {
             errorMessage = error.localizedDescription
         }
