@@ -281,6 +281,7 @@ async def get_applied_listings(
                     has_wbs=item.get("has_wbs", False),
                     url=item.get("url", ""),
                     applied_at=item.get("applied_at"),
+                    verification_status=item.get("verification_status"),
                 ))
         except (json.JSONDecodeError, IOError) as e:
             # Return empty list if file is corrupted

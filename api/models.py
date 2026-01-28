@@ -169,6 +169,10 @@ class AppliedListing(BaseModel):
     has_wbs: bool = Field(default=False, description="WBS requirement")
     url: str = Field(description="Listing URL")
     applied_at: Optional[datetime] = Field(default=None, description="When the form was submitted")
+    verification_status: Optional[str] = Field(
+        default=None,
+        description="Form submission verification: verified, unverified, or None for legacy entries"
+    )
 
 
 class AppliedListingsResponse(BaseModel):

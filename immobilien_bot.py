@@ -5,6 +5,7 @@ import logging
 import json
 import os
 import random
+import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from selenium import webdriver
@@ -443,8 +444,110 @@ class WBMBot:
         time.sleep(2)
         self.setup_browser()
     
+    def _sanitize_id_for_filename(self, listing_id):
+        """Bereinigt eine Listing-ID für die Verwendung in Dateinamen"""
+        if not listing_id:
+            return "unknown"
+        return re.sub(r'[^\w\-]', '_', str(listing_id))
+
+    def _verify_form_submission(self, listing_titel, safe_id, timeout=10):
+        """
+        Verifiziert ob eine Powermail-Formularabsendung erfolgreich war.
+
+        Returns:
+            "verified"   - Bestätigungsmeldung gefunden
+            "unverified" - Formular verschwunden, aber keine explizite Bestätigung
+            "failed"     - Validierungsfehler erkannt
+            "timeout"    - Weder Erfolg noch Fehler nach timeout Sekunden
+        """
+        start = time.time()
+        poll_interval = 0.5
+
+        while (time.time() - start) < timeout:
+            try:
+                # Prüfung 1: Bestätigungsmeldung suchen
+                # a) Powermail CSS-Klassen
+                confirmation_elements = self.driver.find_elements(
+                    By.CSS_SELECTOR,
+                    ".powermail_create, .powermail_confirmation, .tx-powermail-create"
+                )
+                if confirmation_elements:
+                    for elem in confirmation_elements:
+                        if elem.is_displayed() and elem.text.strip():
+                            logging.info(
+                                f"Bestätigung gefunden für {listing_titel}: "
+                                f"'{elem.text.strip()[:100]}'"
+                            )
+                            return "verified"
+
+                # b) WBM-spezifisch: "Vielen Dank" Text auf der Seite
+                page_text = self.driver.find_element(By.TAG_NAME, "body").text
+                if "Vielen Dank" in page_text and "Anfrage" in page_text:
+                    logging.info(
+                        f"WBM-Bestätigung gefunden für {listing_titel}: "
+                        f"'Vielen Dank' Seite erkannt"
+                    )
+                    return "verified"
+
+                # Prüfung 2: Validierungsfehler suchen
+                error_elements = self.driver.find_elements(
+                    By.CSS_SELECTOR,
+                    ".powermail_field_error, .parsley-error, "
+                    ".parsley-errors-list.filled, .powermail_message_error"
+                )
+                visible_errors = [e for e in error_elements if e.is_displayed()]
+                if visible_errors:
+                    error_texts = []
+                    for err in visible_errors[:3]:
+                        if err.text.strip():
+                            error_texts.append(err.text.strip()[:80])
+                    if error_texts:
+                        logging.error(
+                            f"Validierungsfehler für {listing_titel}: "
+                            f"{'; '.join(error_texts)}"
+                        )
+                    self.driver.save_screenshot(
+                        os.path.join(DATA_DIR, f"form_validation_error_{safe_id}.png")
+                    )
+                    return "failed"
+
+                # Prüfung 3: Ist das Formular noch sichtbar?
+                form_elements = self.driver.find_elements(
+                    By.CSS_SELECTOR, "form.powermail_form"
+                )
+                form_still_visible = any(f.is_displayed() for f in form_elements)
+
+                if not form_still_visible:
+                    logging.info(
+                        f"Formular für {listing_titel} ist nicht mehr sichtbar "
+                        f"(wahrscheinlich erfolgreich)"
+                    )
+                    return "unverified"
+
+            except Exception as poll_error:
+                logging.debug(f"Polling-Fehler bei Verifizierung: {poll_error}")
+
+            time.sleep(poll_interval)
+
+        # Timeout - letzte Prüfung ob Formular verschwunden ist
+        try:
+            form_elements = self.driver.find_elements(
+                By.CSS_SELECTOR, "form.powermail_form"
+            )
+            if not any(f.is_displayed() for f in form_elements):
+                return "unverified"
+        except Exception:
+            pass
+
+        return "timeout"
+
     def fill_contact_form(self, listing):
-        """Füllt das Kontaktformular für ein WBM-Angebot aus"""
+        """
+        Füllt das Kontaktformular für ein WBM-Angebot aus.
+
+        Returns:
+            tuple: (success: bool, status: str)
+        """
         listing_url = listing["url"]
         listing_titel = listing.get("titel", "Unbekannter Titel")
         
@@ -455,7 +558,7 @@ class WBMBot:
             time.sleep(2)  # Kurze Pause, um die Seite vollständig zu laden
             
             # Screenshot für Debugging
-            self.driver.save_screenshot(os.path.join(DATA_DIR, f"details_page_{listing['id']}.png"))
+            self.driver.save_screenshot(os.path.join(DATA_DIR, f"details_page_{self._sanitize_id_for_filename(listing['id'])}.png"))
             
             # Warten, bis das Formular geladen ist
             try:
@@ -465,8 +568,8 @@ class WBMBot:
             except TimeoutException:
                 logging.warning(f"Kontaktformular nicht gefunden für: {listing_url}")
                 # Screenshot für Debugging
-                self.driver.save_screenshot(os.path.join(DATA_DIR, f"form_not_found_{listing['id']}.png"))
-                return False
+                self.driver.save_screenshot(os.path.join(DATA_DIR, f"form_not_found_{self._sanitize_id_for_filename(listing['id'])}.png"))
+                return (False, "form_not_found")
             
             # Formularfelder ausfüllen
             try:
@@ -524,10 +627,10 @@ class WBMBot:
                         self.driver.execute_script("arguments[0].click();", checkbox)
                     except Exception as alt_error:
                         logging.error(f"Konnte Datenschutz-Checkbox nicht aktivieren: {alt_error}")
-                        return False
+                        return (False, "checkbox_error")
                 
                 # Screenshot nach dem Ausfüllen für Debugging
-                self.driver.save_screenshot(os.path.join(DATA_DIR, f"form_filled_{listing['id']}.png"))
+                self.driver.save_screenshot(os.path.join(DATA_DIR, f"form_filled_{self._sanitize_id_for_filename(listing['id'])}.png"))
                 
                 # Formular absenden
                 try:
@@ -543,70 +646,122 @@ class WBMBot:
                         self.driver.execute_script("arguments[0].click();", button)
                     except Exception as alt_error:
                         logging.error(f"Konnte Submit-Button nicht klicken: {alt_error}")
-                        return False
+                        return (False, "submit_error")
                 
-                # Warten auf Bestätigung oder neue Seite
-                time.sleep(5)
-                
+                # Verifizierung der Formularabsendung
+                safe_id = self._sanitize_id_for_filename(listing['id'])
+                verification_result = self._verify_form_submission(listing_titel, safe_id)
+
                 # Screenshot nach dem Absenden
-                self.driver.save_screenshot(os.path.join(DATA_DIR, f"form_submitted_{listing['id']}.png"))
-                
-                logging.info(f"Formular für {listing_titel} erfolgreich abgesendet")
-                return True
+                self.driver.save_screenshot(os.path.join(DATA_DIR, f"form_submitted_{safe_id}.png"))
+
+                if verification_result == "verified":
+                    logging.info(f"Formular für {listing_titel} VERIFIZIERT erfolgreich abgesendet")
+                    return (True, "verified")
+                elif verification_result == "unverified":
+                    logging.warning(
+                        f"Formular für {listing_titel} abgesendet, aber Bestätigung "
+                        f"konnte nicht verifiziert werden"
+                    )
+                    return (True, "unverified")
+                elif verification_result == "failed":
+                    logging.error(f"Formularabsendung für {listing_titel} FEHLGESCHLAGEN")
+                    return (False, "submission_failed")
+                else:
+                    logging.warning(
+                        f"Timeout bei der Verifizierung für {listing_titel}"
+                    )
+                    return (False, "submission_timeout")
                 
             except Exception as form_error:
                 logging.error(f"Fehler beim Ausfüllen des Formulars: {form_error}")
-                self.driver.save_screenshot(os.path.join(DATA_DIR, f"form_error_{listing['id']}.png"))
-                return False
-                
+                self.driver.save_screenshot(os.path.join(DATA_DIR, f"form_error_{self._sanitize_id_for_filename(listing['id'])}.png"))
+                return (False, "form_fill_error")
+
         except Exception as e:
             logging.error(f"Allgemeiner Fehler bei der Formularverarbeitung: {e}")
-            return False
+            return (False, "general_error")
     
-    def send_notification_email(self, new_listings):
-        """Sendet eine E-Mail-Benachrichtigung über neue Angebote"""
-        if not new_listings:
+    def _format_listing_for_email(self, index, listing):
+        """Formatiert ein Listing für die E-Mail-Benachrichtigung"""
+        titel = listing.get("titel", "Unbekannter Titel")
+        adresse = listing.get("adresse", "Unbekannte Adresse")
+        area = listing.get("area", "Unbekannter Bezirk")
+        warmmiete = listing.get("warmmiete", "?")
+        zimmer = listing.get("zimmer", "?")
+        wbs = "Ja" if listing.get("has_wbs", False) else "Nein"
+
+        text = f"{index}. {titel}\n"
+        text += f"   Adresse: {adresse}\n"
+        text += f"   Bezirk: {area}\n"
+        text += f"   Warmmiete: {warmmiete} €\n"
+        text += f"   Zimmer: {zimmer}\n"
+        text += f"   WBS erforderlich: {wbs}\n"
+        text += f"   URL: {listing['url']}\n\n"
+        return text
+
+    def send_notification_email(self, verified, unverified, failed):
+        """Sendet eine E-Mail-Benachrichtigung mit Verifizierungsstatus"""
+        total = len(verified) + len(unverified) + len(failed)
+        if total == 0:
             return
-            
+
         try:
-            # E-Mail-Konfiguration aus den Einstellungen
             sender_email = self.notification_email["sender"]
             receiver_email = self.notification_email["recipient"]
             password = self.notification_email["password"]
             smtp_server = self.notification_email["smtp_server"]
             smtp_port = self.notification_email["smtp_port"]
-            
+
             msg = MIMEMultipart()
-            msg["Subject"] = f"Neue WBM-Wohnungsangebote gefunden: {len(new_listings)}"
             msg["From"] = sender_email
             msg["To"] = receiver_email
-            
-            body = "Folgende neue Wohnungsangebote wurden gefunden und automatisch angefragt:\n\n"
-            for i, listing in enumerate(new_listings, 1):
-                titel = listing.get("titel", "Unbekannter Titel")
-                adresse = listing.get("adresse", "Unbekannte Adresse")
-                area = listing.get("area", "Unbekannter Bezirk")
-                warmmiete = listing.get("warmmiete", "?")
-                zimmer = listing.get("zimmer", "?")
-                wbs = "Ja" if listing.get("has_wbs", False) else "Nein"
-                
-                body += f"{i}. {titel}\n"
-                body += f"   Adresse: {adresse}\n"
-                body += f"   Bezirk: {area}\n"
-                body += f"   Warmmiete: {warmmiete} €\n"
-                body += f"   Zimmer: {zimmer}\n"
-                body += f"   WBS erforderlich: {wbs}\n"
-                body += f"   URL: {listing['url']}\n\n"
-            
+
+            # Betreff je nach Status
+            if failed:
+                msg["Subject"] = (
+                    f"WBM-Bot: {len(verified)} bestätigt, "
+                    f"{len(unverified)} unbestätigt, "
+                    f"{len(failed)} fehlgeschlagen"
+                )
+            elif unverified:
+                msg["Subject"] = (
+                    f"WBM-Bot: {len(verified)} bestätigt, "
+                    f"{len(unverified)} unbestätigt"
+                )
+            else:
+                msg["Subject"] = (
+                    f"WBM-Bot: {len(verified)} Bewerbung(en) erfolgreich bestätigt"
+                )
+
+            body = ""
+
+            if verified:
+                body += "=== BESTÄTIGT (Formular erfolgreich abgesendet) ===\n\n"
+                for i, listing in enumerate(verified, 1):
+                    body += self._format_listing_for_email(i, listing)
+
+            if unverified:
+                body += "=== UNBESTÄTIGT (abgesendet, aber keine Bestätigung erkannt) ===\n"
+                body += "(Bitte manuell auf WBM prüfen, ob die Bewerbung eingegangen ist)\n\n"
+                for i, listing in enumerate(unverified, 1):
+                    body += self._format_listing_for_email(i, listing)
+
+            if failed:
+                body += "=== FEHLGESCHLAGEN (Absendung nicht erfolgreich) ===\n"
+                body += "(Diese Wohnungen sollten manuell beworben werden!)\n\n"
+                for i, listing in enumerate(failed, 1):
+                    body += self._format_listing_for_email(i, listing)
+
             body += "\nDiese Nachricht wurde automatisch vom WBM-Bot gesendet."
-            
+
             msg.attach(MIMEText(body, "plain"))
-            
+
             with smtplib.SMTP(smtp_server, smtp_port) as server:
                 server.starttls()
                 server.login(sender_email, password)
                 server.send_message(msg)
-                
+
             logging.info("Benachrichtigungs-E-Mail gesendet")
         except Exception as e:
             logging.error(f"Fehler beim Senden der E-Mail: {e}")
@@ -754,22 +909,40 @@ class WBMBot:
             while True:
                 try:
                     new_listings = self.check_for_new_listings()
-                    
+
+                    verified_listings = []
+                    unverified_listings = []
+                    failed_listings = []
+
                     for listing in new_listings:
-                        success = self.fill_contact_form(listing)
+                        success, status = self.fill_contact_form(listing)
+                        listing["verification_status"] = status
                         if success:
-                            logging.info(f"Anfrage für {listing.get('titel', 'Angebot')} erfolgreich")
+                            logging.info(
+                                f"Anfrage für {listing.get('titel', 'Angebot')} "
+                                f"erfolgreich (Status: {status})"
+                            )
                             self.save_applied_listing(listing)
+                            if status == "verified":
+                                verified_listings.append(listing)
+                            else:
+                                unverified_listings.append(listing)
                         else:
-                            logging.warning(f"Anfrage für {listing.get('titel', 'Angebot')} fehlgeschlagen")
-                        
+                            logging.warning(
+                                f"Anfrage für {listing.get('titel', 'Angebot')} "
+                                f"fehlgeschlagen (Status: {status})"
+                            )
+                            failed_listings.append(listing)
+
                         # Kurze Pause zwischen den Anfragen, um nicht als Bot erkannt zu werden
                         pause_time = random.uniform(5, 15)
                         logging.info(f"Pause für {pause_time:.1f} Sekunden...")
                         time.sleep(pause_time)
-                    
-                    if new_listings:
-                        self.send_notification_email(new_listings)
+
+                    if verified_listings or unverified_listings or failed_listings:
+                        self.send_notification_email(
+                            verified_listings, unverified_listings, failed_listings
+                        )
                     
                     next_check = time.strftime('%H:%M:%S', time.localtime(time.time() + self.check_interval))
                     logging.info(f"Nächste Überprüfung um {next_check} (in {self.check_interval} Sekunden)")
