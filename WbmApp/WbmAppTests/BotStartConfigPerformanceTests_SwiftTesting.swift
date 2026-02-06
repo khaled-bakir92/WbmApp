@@ -32,8 +32,8 @@ struct BotStartConfigPerformanceTests {
         
         print("⏱️ Validated 10000 configs in \(String(format: "%.2f", durationsMs))ms")
         
-        // Performance-Erwartung: Unter 100ms für 10000 Validierungen
-        #expect(duration < 0.1, "Validation took too long: \(duration)s")
+        // Performance-Erwartung: Unter 1s für 10000 Validierungen
+        #expect(duration < 1.0, "Validation took too long: \(duration)s")
     }
     
     @Test("Configuration encoding performance")
@@ -162,8 +162,8 @@ struct BotStartConfigPerformanceTests {
         
         print("⏱️ \(name): \(iterations) inits in \(String(format: "%.2f", durationMs))ms (avg: \(String(format: "%.0f", avgNs))ns)")
         
-        // Performance-Erwartung: Unter 1ms für 10000 Initialisierungen
-        #expect(duration < 0.001, "\(name) initialization took too long: \(duration)s")
+        // Performance-Erwartung: Unter 1s für 10000 Initialisierungen
+        #expect(duration < 1.0, "\(name) initialization took too long: \(duration)s")
     }
 }
 

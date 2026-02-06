@@ -6,6 +6,7 @@
 //
 
 import Foundation
+@testable import WbmApp
 
 /// Beispiele für Performance-Tests in der Praxis
 struct PerformanceTestingExamples {
@@ -49,10 +50,10 @@ struct PerformanceTestingExamples {
     // MARK: - 3. Vergleichs-Benchmark
     
     /// Vergleicht verschiedene Konfigurationen
-    static func exampleComparisonBenchmark() {
+    static func exampleComparisonBenchmark() throws {
         print("\n🔍 Example 3: Comparison Benchmark\n")
-        
-        PerformanceBenchmark.benchmarkBotStartConfig()
+
+        try PerformanceBenchmark.benchmarkBotStartConfig()
     }
     
     // MARK: - 4. Async/Await Performance
@@ -162,35 +163,3 @@ struct PerformanceTestingExamples {
     }
 }
 
-// MARK: - Main Runner
-
-/// Führt alle Beispiele aus
-@main
-struct PerformanceTestRunner {
-    static func main() async {
-        print("""
-        
-        ╔════════════════════════════════════════════╗
-        ║   WBM Bot Controller Performance Tests    ║
-        ╚════════════════════════════════════════════╝
-        
-        """)
-        
-        // Uncomment die Tests, die du ausführen möchtest:
-        
-        await PerformanceTestingExamples.exampleSimpleTiming()
-        PerformanceTestingExamples.exampleDetailedBenchmark()
-        PerformanceTestingExamples.exampleComparisonBenchmark()
-        await PerformanceTestingExamples.exampleAsyncPerformance()
-        PerformanceTestingExamples.exampleMemoryProfiling()
-        await PerformanceTestingExamples.exampleRealWorldScenario()
-        
-        print("""
-        
-        ╔════════════════════════════════════════════╗
-        ║          All tests completed! ✅           ║
-        ╚════════════════════════════════════════════╝
-        
-        """)
-    }
-}

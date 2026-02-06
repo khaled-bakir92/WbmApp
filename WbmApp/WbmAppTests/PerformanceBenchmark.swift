@@ -7,6 +7,7 @@
 
 import Foundation
 import os.log
+@testable import WbmApp
 
 /// Utility für detaillierte Performance-Messungen
 struct PerformanceBenchmark: Sendable {
@@ -139,7 +140,7 @@ struct PerformanceBenchmark: Sendable {
     /// Vergleicht mehrere Operationen
     static func compare(
         _ operations: [(name: String, operation: () throws -> Void)]
-    ) rethrows {
+    ) throws {
         print("\n🔄 Running comparison benchmark...\n")
         
         var results: [Result] = []
@@ -169,8 +170,8 @@ struct PerformanceBenchmark: Sendable {
 
 extension PerformanceBenchmark {
     /// Beispiel: Benchmarkt BotStartConfig-Operationen
-    static func benchmarkBotStartConfig() {
-        compare([
+    static func benchmarkBotStartConfig() throws {
+        try compare([
             ("Default Config Creation", {
                 _ = BotStartConfig.default
             }),
