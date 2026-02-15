@@ -102,8 +102,9 @@ export function ListingsContent({
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Known Listings leeren
+                <Trash2 className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Known Listings leeren</span>
+                <span className="sm:hidden">Leeren</span>
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
