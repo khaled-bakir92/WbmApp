@@ -17,9 +17,12 @@ from ..models import (
     AppliedListing,
     AppliedListingsResponse,
     BotStats,
+    DailyApplicationCount,
     LogsResponse,
+    PaginatedListingsResponse,
     ScreenshotInfo,
     ScreenshotsListResponse,
+    WeeklyStatsResponse,
 )
 
 
@@ -253,15 +256,83 @@ async def get_screenshot(
     )
 
 
-@router.get("/listings", response_model=AppliedListingsResponse)
+@router.get("/stats/weekly", response_model=WeeklyStatsResponse)
+async def get_weekly_stats(
+    _: AuthDep,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> WeeklyStatsResponse:
+    """
+    Get application counts per day for the last 7 days.
+    """
+    today = datetime.now().date()
+    days = {}
+    for i in range(7):
+        d = today - timedelta(days=i)
+        days[d.isoformat()] = 0
+
+    if settings.applied_listings.exists():
+        try:
+            with open(settings.applied_listings, "r", encoding="utf-8") as f:
+                raw_listings = json.load(f)
+
+            for item in raw_listings:
+                applied_at = item.get("applied_at")
+                if applied_at:
+                    try:
+                        dt = datetime.fromisoformat(applied_at)
+                        date_str = dt.date().isoformat()
+                        if date_str in days:
+                            days[date_str] += 1
+                    except (ValueError, TypeError):
+                        pass
+        except (json.JSONDecodeError, IOError):
+            pass
+
+    day_list = [
+        DailyApplicationCount(date=date, count=count)
+        for date, count in sorted(days.items())
+    ]
+
+    return WeeklyStatsResponse(
+        days=day_list,
+        total=sum(d.count for d in day_list),
+    )
+
+
+@router.delete("/known-listings")
+async def clear_known_listings(
+    _: AuthDep,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> dict:
+    """
+    Clear all known listings.
+
+    This resets the bot's memory of seen listings, so on the next check
+    all current listings will be treated as new.
+    """
+    try:
+        with open(settings.known_listings, "w", encoding="utf-8") as f:
+            json.dump([], f)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to clear known listings: {str(e)}",
+        )
+
+    return {"success": True, "message": "Known listings cleared"}
+
+
+@router.get("/listings", response_model=PaginatedListingsResponse)
 async def get_applied_listings(
     _: AuthDep,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> AppliedListingsResponse:
+    page: int = Query(default=1, ge=1, description="Page number"),
+    per_page: int = Query(default=20, ge=1, le=100, description="Items per page"),
+    search: str = Query(default="", description="Search in title, address, area"),
+    status_filter: str = Query(default="", alias="status", description="Filter by verification status: verified, unverified"),
+) -> PaginatedListingsResponse:
     """
-    Get list of all applied/contacted listings with full details.
-
-    Returns listings that have been automatically contacted through the bot.
+    Get paginated list of applied/contacted listings with search and filtering.
     """
     listings = []
 
@@ -283,14 +354,41 @@ async def get_applied_listings(
                     applied_at=item.get("applied_at"),
                     verification_status=item.get("verification_status"),
                 ))
-        except (json.JSONDecodeError, IOError) as e:
-            # Return empty list if file is corrupted
+        except (json.JSONDecodeError, IOError):
             pass
 
     # Sort by applied_at (newest first)
     listings.sort(key=lambda x: x.applied_at or "", reverse=True)
 
-    return AppliedListingsResponse(
-        listings=listings,
-        total_count=len(listings),
+    # Apply search filter
+    if search:
+        search_lower = search.lower()
+        listings = [
+            l for l in listings
+            if search_lower in l.titel.lower()
+            or search_lower in l.adresse.lower()
+            or search_lower in l.area.lower()
+        ]
+
+    # Apply status filter
+    if status_filter:
+        listings = [
+            l for l in listings
+            if l.verification_status == status_filter
+        ]
+
+    total_count = len(listings)
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+
+    # Paginate
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated = listings[start:end]
+
+    return PaginatedListingsResponse(
+        listings=paginated,
+        total_count=total_count,
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
     )

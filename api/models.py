@@ -181,6 +181,27 @@ class AppliedListingsResponse(BaseModel):
     total_count: int
 
 
+class PaginatedListingsResponse(BaseModel):
+    """Paginated response for applied listings endpoint."""
+    listings: list[AppliedListing]
+    total_count: int
+    page: int
+    per_page: int
+    total_pages: int
+
+
+class DailyApplicationCount(BaseModel):
+    """Application count for a single day."""
+    date: str = Field(description="Date in YYYY-MM-DD format")
+    count: int = Field(description="Number of applications on this day")
+
+
+class WeeklyStatsResponse(BaseModel):
+    """Weekly application statistics."""
+    days: list[DailyApplicationCount]
+    total: int = Field(description="Total applications in the last 7 days")
+
+
 # ============== Error Models ==============
 
 class ErrorResponse(BaseModel):
