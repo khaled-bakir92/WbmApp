@@ -63,7 +63,7 @@ export function ApplicationsChart() {
           {data.total} total application{data.total !== 1 ? "s" : ""} this week
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-w-0">
         {data.total === 0 ? (
           <div className="flex items-center justify-center h-[250px] text-muted-foreground">
             No applications in the last 7 days
