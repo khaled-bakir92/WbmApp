@@ -1,6 +1,5 @@
 """Monitoring Endpoints for Logs, Stats, and Screenshots"""
 import json
-import os
 import re
 from collections import deque
 from datetime import datetime, timedelta
@@ -15,7 +14,6 @@ from ..bot_manager import BotManager, get_bot_manager
 from ..config import Settings, get_settings
 from ..models import (
     AppliedListing,
-    AppliedListingsResponse,
     BotStats,
     DailyApplicationCount,
     LogsResponse,
