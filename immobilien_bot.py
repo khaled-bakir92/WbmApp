@@ -47,7 +47,7 @@ class WBMBot:
         self.url = "https://www.wbm.de/wohnungen-berlin/angebote/"
         self.check_interval = check_interval
         self.headless = headless
-        self.known_listings = set()
+        self.known_listings = {}
         self.applied_listings = []  # Liste der beworbenen Wohnungen mit Details
 
         # Benutzerdaten und Filter aus JSON-Dateien laden
@@ -160,24 +160,46 @@ class WBMBot:
             raise
 
     def load_known_listings(self):
-        """Lädt bereits bekannte Angebote aus einer Datei"""
+        """Lädt bereits bekannte Angebote aus einer Datei (backward-kompatibel)"""
         try:
             filepath = os.path.join(DATA_DIR, 'known_listings.json')
             if os.path.exists(filepath):
-                with open(filepath, 'r') as f:
-                    self.known_listings = set(json.load(f))
-                logging.info(f"Geladen: {len(self.known_listings)} bekannte Angebote")
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                if isinstance(data, list):
+                    # Altes Format: Array von IDs → migrieren zu dict
+                    self.known_listings = {
+                        lid: {
+                            "id": lid,
+                            "url": "",
+                            "titel": "Unbekannt",
+                            "adresse": "Unbekannt",
+                            "area": "Unbekannt",
+                            "warmmiete": 0,
+                            "zimmer": 0,
+                            "has_wbs": False,
+                        }
+                        for lid in data
+                    }
+                    logging.info(f"Migriert: {len(self.known_listings)} bekannte Angebote (altes Format → dict)")
+                    self.save_known_listings()
+                elif isinstance(data, dict):
+                    self.known_listings = data
+                    logging.info(f"Geladen: {len(self.known_listings)} bekannte Angebote")
+                else:
+                    self.known_listings = {}
+                    logging.warning("Unbekanntes Format in known_listings.json, beginne mit leerer Liste")
             else:
                 logging.info("Keine gespeicherten Angebote gefunden, beginne mit leerer Liste")
         except Exception as e:
             logging.error(f"Fehler beim Laden bekannter Angebote: {e}")
-    
+
     def save_known_listings(self):
         """Speichert bekannte Angebote in einer Datei"""
         try:
             filepath = os.path.join(DATA_DIR, 'known_listings.json')
-            with open(filepath, 'w') as f:
-                json.dump(list(self.known_listings), f)
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(self.known_listings, f, ensure_ascii=False, indent=2)
             logging.info(f"{len(self.known_listings)} Angebote gespeichert")
         except Exception as e:
             logging.error(f"Fehler beim Speichern bekannter Angebote: {e}")
@@ -360,26 +382,34 @@ class WBMBot:
                     except NoSuchElementException:
                         pass
                     
+                    # Listing-Details als dict
+                    listing_details = {
+                        "id": listing_id,
+                        "url": listing_url,
+                        "titel": titel,
+                        "adresse": adresse,
+                        "area": area,
+                        "warmmiete": warmmiete,
+                        "zimmer": zimmer,
+                        "has_wbs": has_wbs,
+                    }
+
                     # Angebot filtern
                     if self.filter_listing(warmmiete, zimmer, has_wbs, area):
                         if listing_id not in self.known_listings:
-                            new_listings.append({
-                                "id": listing_id,
-                                "url": listing_url,
-                                "titel": titel,
-                                "adresse": adresse,
-                                "area": area,
-                                "warmmiete": warmmiete,
-                                "zimmer": zimmer,
-                                "has_wbs": has_wbs
-                            })
-                            self.known_listings.add(listing_id)
+                            new_listings.append(listing_details)
+                            self.known_listings[listing_id] = listing_details
                             logging.info(f"Neues gefiltertes Angebot gefunden: {titel} in {adresse} ({listing_id})")
+                        else:
+                            # Details aktualisieren für bereits bekannte Listings
+                            self.known_listings[listing_id] = listing_details
                     else:
                         # Angebot zum Ausschließen merken, auch wenn es bereits gefiltert wurde
                         if listing_id not in self.known_listings:
-                            self.known_listings.add(listing_id)
+                            self.known_listings[listing_id] = listing_details
                             logging.info(f"Angebot ausgeschlossen durch Filter: {titel} in {adresse} ({listing_id})")
+                        else:
+                            self.known_listings[listing_id] = listing_details
                             
                 except Exception as e:
                     logging.error(f"Fehler beim Verarbeiten eines Angebots: {e}")

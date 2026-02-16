@@ -113,10 +113,16 @@ export function ListingsTable({ listings, isLoading }: ListingsTableProps) {
                   variant={
                     listing.verification_status === "verified"
                       ? "default"
-                      : "secondary"
+                      : listing.verification_status === "unverified"
+                        ? "outline"
+                        : "secondary"
                   }
                 >
-                  {listing.verification_status || "unknown"}
+                  {listing.verification_status === "verified"
+                    ? "Applied"
+                    : listing.verification_status === "unverified"
+                      ? "Not Applied"
+                      : listing.verification_status || "unknown"}
                 </Badge>
               </TableCell>
               <TableCell className="hidden md:table-cell whitespace-nowrap">

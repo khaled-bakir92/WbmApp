@@ -42,8 +42,8 @@ export function ListingsFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All statuses</SelectItem>
-          <SelectItem value="verified">Verified</SelectItem>
-          <SelectItem value="unverified">Unverified</SelectItem>
+          <SelectItem value="verified">Applied</SelectItem>
+          <SelectItem value="unverified">Not Applied</SelectItem>
         </SelectContent>
       </Select>
       <span className="text-sm text-muted-foreground whitespace-nowrap">

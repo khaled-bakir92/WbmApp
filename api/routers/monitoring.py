@@ -312,7 +312,7 @@ async def clear_known_listings(
     """
     try:
         with open(settings.known_listings, "w", encoding="utf-8") as f:
-            json.dump([], f)
+            json.dump({}, f)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -332,18 +332,26 @@ async def get_applied_listings(
     status_filter: str = Query(default="", alias="status", description="Filter by verification status: verified, unverified"),
 ) -> PaginatedListingsResponse:
     """
-    Get paginated list of applied/contacted listings with search and filtering.
+    Get paginated list of all listings (known + applied) with search and filtering.
+
+    - **unverified**: Known listings the bot has seen but not applied to
+    - **verified/unverified**: Applied listings with their submission verification status
     """
-    listings = []
+    # 1. Load applied listings
+    applied_ids: set[str] = set()
+    applied_listings: list[AppliedListing] = []
 
     if settings.applied_listings.exists():
         try:
             with open(settings.applied_listings, "r", encoding="utf-8") as f:
-                raw_listings = json.load(f)
+                raw_applied = json.load(f)
 
-            for item in raw_listings:
-                listings.append(AppliedListing(
-                    id=item.get("id"),
+            for item in raw_applied:
+                lid = item.get("id")
+                if lid:
+                    applied_ids.add(lid)
+                applied_listings.append(AppliedListing(
+                    id=lid,
                     titel=item.get("titel", "Unbekannt"),
                     adresse=item.get("adresse", "Unbekannt"),
                     area=item.get("area", "Unbekannt"),
@@ -352,13 +360,54 @@ async def get_applied_listings(
                     has_wbs=item.get("has_wbs", False),
                     url=item.get("url", ""),
                     applied_at=item.get("applied_at"),
-                    verification_status=item.get("verification_status"),
+                    verification_status=item.get("verification_status") or "verified",
                 ))
         except (json.JSONDecodeError, IOError):
             pass
 
-    # Sort by applied_at (newest first)
-    listings.sort(key=lambda x: x.applied_at or "", reverse=True)
+    # 2. Load known listings (dict format, backward-compat for old array)
+    known_only: list[AppliedListing] = []
+
+    if settings.known_listings.exists():
+        try:
+            with open(settings.known_listings, "r", encoding="utf-8") as f:
+                raw_known = json.load(f)
+
+            # Backward compat: old format was a list of ID strings
+            if isinstance(raw_known, list):
+                known_dict = {
+                    lid: {"id": lid, "titel": "Unbekannt", "adresse": "Unbekannt",
+                          "area": "Unbekannt", "warmmiete": 0, "zimmer": 0,
+                          "has_wbs": False, "url": ""}
+                    for lid in raw_known
+                }
+            elif isinstance(raw_known, dict):
+                known_dict = raw_known
+            else:
+                known_dict = {}
+
+            for lid, item in known_dict.items():
+                if lid in applied_ids:
+                    continue  # Already in applied list
+                known_only.append(AppliedListing(
+                    id=lid,
+                    titel=item.get("titel", "Unbekannt"),
+                    adresse=item.get("adresse", "Unbekannt"),
+                    area=item.get("area", "Unbekannt"),
+                    warmmiete=str(item.get("warmmiete", "?")),
+                    zimmer=str(item.get("zimmer", "?")),
+                    has_wbs=item.get("has_wbs", False),
+                    url=item.get("url", ""),
+                    applied_at=None,
+                    verification_status="unverified",
+                ))
+        except (json.JSONDecodeError, IOError):
+            pass
+
+    # 3. Merge: applied (newest first), then known-only (alphabetical by title)
+    applied_listings.sort(key=lambda x: x.applied_at or "", reverse=True)
+    known_only.sort(key=lambda x: x.titel.lower())
+    listings = applied_listings + known_only
 
     # Apply search filter
     if search:
