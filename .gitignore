@@ -35,3 +35,5 @@ Thumbs.db
 # Xcode user files
 *.xcuserstate
 xcuserdata/
+
+dashboard/
