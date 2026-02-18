@@ -16,8 +16,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WBM Bot Dashboard",
+  title: "WohnBlitz",
   description: "Control and monitor your WBM apartment bot",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "WohnBlitz",
+  },
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
